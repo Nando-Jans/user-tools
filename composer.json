@@ -19,6 +19,6 @@
         "symfony/stimulus-bundle": "^2.9 || ^3.0",
         "symfony/twig-bundle": "^7.4 || ^8.0",
         "symfony/framework-bundle": "8.0.*",
-        "symfony/validator": "^8.1"
+        "symfony/validator": "^8.0"
     }
 }
