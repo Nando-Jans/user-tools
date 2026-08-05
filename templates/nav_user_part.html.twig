@@ -1,0 +1,27 @@
+{% if app.user %}
+<div class="dropdown w-100">
+    <button
+            class="{{ user_tools.nav_button.class }} w-100 dropdown-toggle"
+            type="button"
+            id="navUserPartDropdown"
+            data-bs-toggle="dropdown"
+            aria-haspopup="true"
+            aria-expanded="false"
+    >
+        <i class="{{ user_tools.nav_button.icon }}"></i>
+        {{ app.user }}
+    </button>
+    <div class="dropdown-menu w-100" aria-labelledby="navUserPartDropdown">
+        {% if user_tools.logout.enabled %}
+            {% include '@NandoJansUserTools/nav_user_dropdown_item.html.twig' with user_tools.details %}
+        {% endif %}
+        {% for item in user_tools.items %}
+            {% include '@NandoJansUserTools/nav_user_dropdown_item.html.twig' with item %}
+        {% endfor %}
+        {% if user_tools.logout.enabled %}
+            <hr/>
+            {% include '@NandoJansUserTools/nav_user_dropdown_item.html.twig' with user_tools.logout %}
+        {% endif %}
+    </div>
+</div>
+{% endif %}
