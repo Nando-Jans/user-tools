@@ -3,8 +3,13 @@
 namespace NandoJans\UserTools;
 
 use NandoJans\UserTools\Controller\UserController;
+use NandoJans\UserTools\Entity\User;
 use NandoJans\UserTools\Form\ForgotPasswordType;
 use NandoJans\UserTools\Form\ResetPasswordType;
+use NandoJans\UserTools\Interface\UserRepositoryInterface;
+use NandoJans\UserTools\Repository\UserRepository;
+use NandoJans\UserTools\Interface\PasswordForgotEmailInterface;
+use NandoJans\UserTools\Service\NullPasswordForgotEmail;
 use NandoJans\UserTools\Twig\UserToolsExtension;
 use NandoJans\UserTools\Twig\UserToolsViewConfig;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
@@ -20,6 +25,30 @@ final class NandoJansUserToolsBundle extends AbstractBundle
     {
         $definition->rootNode()
             ->children()
+                ->scalarNode('entity_class')
+                    ->isRequired()
+                    ->cannotBeEmpty()
+                    ->validate()
+                        ->ifTrue(static fn (string $class): bool => !is_a($class, User::class, true))
+                        ->thenInvalid('The user entity must extend "%s".', User::class)
+                    ->end()
+                ->end()
+                ->scalarNode('repository_class')
+                    ->defaultValue(UserRepository::class)
+                    ->cannotBeEmpty()
+                    ->validate()
+                        ->ifTrue(static fn (string $class): bool => !is_a($class, UserRepositoryInterface::class, true))
+                        ->thenInvalid('The user repository must implement "%s".', UserRepositoryInterface::class)
+                    ->end()
+                ->end()
+                ->scalarNode('controller_class')
+                    ->defaultValue(UserController::class)
+                    ->cannotBeEmpty()
+                    ->validate()
+                        ->ifTrue(static fn (string $class): bool => !is_a($class, UserController::class, true))
+                        ->thenInvalid('The user controller must extend "%s".', UserController::class)
+                    ->end()
+                ->end()
                 ->arrayNode('nav_button')
                     ->addDefaultsIfNotSet()
                     ->children()
@@ -202,8 +231,21 @@ final class NandoJansUserToolsBundle extends AbstractBundle
             ])
             ->tag('twig.extension');
 
+        $repositoryClass = $config['repository_class'];
+        if ($repositoryClass === UserRepository::class) {
+            $services->set(UserRepository::class)
+                ->args([service('doctrine'), $config['entity_class']]);
+        }
+        $services->alias(UserRepositoryInterface::class, $repositoryClass);
+
+        if (!$container->hasAlias(PasswordForgotEmailInterface::class) && !$container->hasDefinition(PasswordForgotEmailInterface::class)) {
+            $services->set(NullPasswordForgotEmail::class);
+            $services->alias(PasswordForgotEmailInterface::class, NullPasswordForgotEmail::class);
+        }
+
+        $controllerClass = $config['controller_class'];
         $services
-            ->set(UserController::class)
+            ->set($controllerClass)
             ->args([
                 '$detailsPage' => $config['details_page'],
                 '$forgotPasswordPage' => $config['forgot_password_page'],
@@ -212,6 +254,10 @@ final class NandoJansUserToolsBundle extends AbstractBundle
             ->autowire()
             ->autoconfigure()
             ->tag('controller.service_arguments');
+
+        if ($controllerClass !== UserController::class) {
+            $services->alias(UserController::class, $controllerClass);
+        }
 
         $services
             ->set(ForgotPasswordType::class)

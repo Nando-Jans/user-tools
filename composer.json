@@ -11,6 +11,8 @@
     },
     "require": {
         "php": "^8.5",
+        "scheb/2fa-google-authenticator": "^8.0",
+        "symfony/security-core": "^7.4 || ^8.0",
         "symfony/form": "^7.4 || ^8.0",
         "symfony/http-kernel": "^7.4 || ^8.0",
         "symfony/options-resolver": "^7.4 || ^8.0",
@@ -19,6 +21,11 @@
         "symfony/stimulus-bundle": "^2.9 || ^3.0",
         "symfony/twig-bundle": "^7.4 || ^8.0",
         "symfony/framework-bundle": "8.0.*",
-        "symfony/validator": "^8.0"
+        "symfony/validator": "^8.0",
+        "symfony/orm-pack": "^2.7"
+    },
+    "require-dev": {
+        "symfony/maker-bundle": "^1.67",
+        "symfony/security": "^2.0"
     }
 }
