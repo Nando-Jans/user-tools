@@ -1,0 +1,15 @@
+{% extends 'layout/auth.html.twig' %}
+{% block body %}
+    <h1>Login</h1>
+    {% include 'components/flash_message.html.twig' %}
+    {% if authenticationError %}
+        <div class="alert alert-danger" role="alert">Inloggen is niet gelukt. Controleer je e-mailadres en wachtwoord.</div>
+    {% endif %}
+    {{ form_start(form) }}
+    {{ form_row(form.email) }}
+    {{ form_row(form.password, {attr: {class: 'form-control', type: 'password'}}) }}
+    <button class="btn-app btn-app-primary w-100">Login</button>
+    {{ form_end(form) }}
+    <hr>
+    <a class="btn btn-link" href="{{ path('nando_jans_user_tools_forgot_password') }}">Wachtwoord vergeten</a>
+{% endblock %}

@@ -25,15 +25,19 @@ class PasswordResetRequest
     #[ORM\Column]
     private DateTimeImmutable $expiresAt;
 
-    public function __construct(UserInterface $user, string $tokenHash, DateTimeImmutable $expiresAt)
+    public function __construct(User $user, string $tokenHash, DateTimeImmutable $expiresAt)
     {
         $this->user = $user;
         $this->tokenHash = $tokenHash;
         $this->expiresAt = $expiresAt;
     }
 
-    public function getUser(): UserInterface
+    public function getUser(): User
     {
+        if (!$this->user instanceof User) {
+            throw new \LogicException('The configured user entity must extend the user-tools User entity.');
+        }
+
         return $this->user;
     }
 

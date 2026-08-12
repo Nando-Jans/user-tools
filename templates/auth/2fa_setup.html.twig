@@ -1,0 +1,14 @@
+{% extends 'layout/auth.html.twig' %}
+{% block body %}
+    <h1 class="mb-3">2FA</h1>
+    {% include 'components/flash_message.html.twig' %}
+    <p>Scan de QR-code met Google Authenticator en vul daarna de code in.</p>
+    <div class="text-center mb-3"><img src="{{ qrCode }}" alt="2FA QR Code" style="max-width:220px"></div>
+    <details class="mb-3"><summary>Handmatig instellen</summary><code>{{ secret }}</code></details>
+    <form action="{{ path('2fa_setup_verify') }}" method="post">
+        <label for="auth-code">Verificatiecode</label>
+        <input id="auth-code" class="form-control mb-3" name="_auth_code" autocomplete="one-time-code" inputmode="numeric" required autofocus>
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token('2fa_setup') }}">
+        <button class="btn-app btn-app-primary w-100" type="submit">Verifieer 2FA</button>
+    </form>
+{% endblock %}

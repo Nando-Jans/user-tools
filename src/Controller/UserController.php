@@ -107,7 +107,8 @@ class UserController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $password = $form->get('password')->getData();
+            $passwordField = $form->has('plainPassword') ? 'plainPassword' : 'password';
+            $password = (string) $form->get($passwordField)->getData();
             $wasReset = $this->forgotPasswordHandler->resetPassword(
                 hash('sha256', $token),
                 $password,

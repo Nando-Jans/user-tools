@@ -2,16 +2,29 @@
 
 namespace NandoJans\UserTools;
 
+use NandoJans\UserTools\Controller\AuthController;
 use NandoJans\UserTools\Controller\UserController;
 use NandoJans\UserTools\Entity\User;
+use NandoJans\UserTools\Email\PasswordForgotEmail;
+use NandoJans\UserTools\EventSubscriber\ForceTwoFactorSetupSubscriber;
 use NandoJans\UserTools\Form\ForgotPasswordType;
+use NandoJans\UserTools\Form\LoginType;
 use NandoJans\UserTools\Form\ResetPasswordType;
+use NandoJans\UserTools\Interface\ForgotPasswordHandlerInterface;
+use NandoJans\UserTools\Interface\UserDetailsHandlerInterface;
 use NandoJans\UserTools\Interface\UserRepositoryInterface;
 use NandoJans\UserTools\Repository\UserRepository;
 use NandoJans\UserTools\Interface\PasswordForgotEmailInterface;
-use NandoJans\UserTools\Service\NullPasswordForgotEmail;
+use NandoJans\UserTools\Security\LoginAuthenticator;
+use NandoJans\UserTools\Service\EnvironmentTwoFactorCondition;
+use NandoJans\UserTools\Service\ForgotPasswordHandler;
+use NandoJans\UserTools\Service\TwoFactorSetupService;
+use NandoJans\UserTools\Service\UserDetailsHandler;
 use NandoJans\UserTools\Twig\UserToolsExtension;
 use NandoJans\UserTools\Twig\UserToolsViewConfig;
+use Doctrine\ORM\Events;
+use Doctrine\ORM\Tools\ResolveTargetEntityListener;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -207,8 +220,36 @@ final class NandoJansUserToolsBundle extends AbstractBundle
                         ->end()
                     ->end()
                 ->end()
+                ->arrayNode('password_reset_email')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->scalarNode('from_address')->defaultValue('no-reply@example.com')->end()
+                        ->scalarNode('from_name')->defaultValue('User tools')->end()
+                        ->scalarNode('subject')->defaultValue('Reset your password')->end()
+                    ->end()
+                ->end()
                 ->scalarNode('login_route')
                     ->defaultValue('app_auth_login')
+                ->end()
+                ->arrayNode('authentication')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->scalarNode('target_route')->defaultValue('app_dashboard')->end()
+                        ->scalarNode('two_factor_setup_route')->defaultValue('2fa_setup')->end()
+                        ->arrayNode('two_factor_disabled_environments')
+                            ->scalarPrototype()->end()
+                            ->defaultValue(['dev'])
+                        ->end()
+                        ->arrayNode('two_factor_allowed_routes')
+                            ->scalarPrototype()->end()
+                            ->defaultValue([
+                                'app_auth_login', '2fa_setup', '2fa_setup_verify',
+                                '2fa_login', '2fa_login_check', 'app_logout', '_logout_main',
+                                'nando_jans_user_tools_forgot_password',
+                                'nando_jans_user_tools_reset_password',
+                            ])
+                        ->end()
+                    ->end()
                 ->end()
             ->end();
 
@@ -217,6 +258,11 @@ final class NandoJansUserToolsBundle extends AbstractBundle
     public function loadExtension(array $config, ContainerConfigurator $configurator, ContainerBuilder $container): void
     {
         $services = $configurator->services();
+        $services->set('nando_jans_user_tools.resolve_target_entity', ResolveTargetEntityListener::class)
+            ->call('addResolveTargetEntity', [UserInterface::class, $config['entity_class'], []])
+            ->tag('doctrine.event_listener', ['event' => Events::loadClassMetadata])
+            ->tag('doctrine.event_listener', ['event' => Events::onClassMetadataNotFound]);
+
         $services->set(UserToolsViewConfig::class)
             ->args([
                 $config['nav_button'],
@@ -238,10 +284,10 @@ final class NandoJansUserToolsBundle extends AbstractBundle
         }
         $services->alias(UserRepositoryInterface::class, $repositoryClass);
 
-        if (!$container->hasAlias(PasswordForgotEmailInterface::class) && !$container->hasDefinition(PasswordForgotEmailInterface::class)) {
-            $services->set(NullPasswordForgotEmail::class);
-            $services->alias(PasswordForgotEmailInterface::class, NullPasswordForgotEmail::class);
-        }
+        $services->set(PasswordForgotEmail::class)
+            ->args(['$config' => $config['password_reset_email']])
+            ->autowire();
+        $services->alias(PasswordForgotEmailInterface::class, PasswordForgotEmail::class);
 
         $controllerClass = $config['controller_class'];
         $services
@@ -276,5 +322,48 @@ final class NandoJansUserToolsBundle extends AbstractBundle
             ->autowire()
             ->autoconfigure()
             ->tag('form.type');
+
+        $services->set(LoginType::class)
+            ->autowire()
+            ->autoconfigure()
+            ->tag('form.type');
+        $services->set(TwoFactorSetupService::class);
+        $services->set(EnvironmentTwoFactorCondition::class)
+            ->args([
+                '$environment' => '%kernel.environment%',
+                '$disabledEnvironments' => $config['authentication']['two_factor_disabled_environments'],
+            ])
+            ->autowire();
+        $services->set(LoginAuthenticator::class)
+            ->args([
+                '$loginRoute' => $config['login_route'],
+                '$targetRoute' => $config['authentication']['target_route'],
+                '$twoFactorSetupRoute' => $config['authentication']['two_factor_setup_route'],
+                '$environment' => '%kernel.environment%',
+                '$twoFactorDisabledEnvironments' => $config['authentication']['two_factor_disabled_environments'],
+            ])
+            ->autowire();
+        $services->set(AuthController::class)
+            ->args([
+                '$environment' => '%kernel.environment%',
+                '$twoFactorDisabledEnvironments' => $config['authentication']['two_factor_disabled_environments'],
+                '$targetRoute' => $config['authentication']['target_route'],
+            ])
+            ->autowire()
+            ->autoconfigure()
+            ->tag('controller.service_arguments');
+        $services->set(ForceTwoFactorSetupSubscriber::class)
+            ->args([
+                '$environment' => '%kernel.environment%',
+                '$disabledEnvironments' => $config['authentication']['two_factor_disabled_environments'],
+                '$setupRoute' => $config['authentication']['two_factor_setup_route'],
+                '$allowedRoutes' => $config['authentication']['two_factor_allowed_routes'],
+            ])
+            ->autowire()
+            ->autoconfigure();
+        $services->set(ForgotPasswordHandler::class)->autowire();
+        $services->alias(ForgotPasswordHandlerInterface::class, ForgotPasswordHandler::class);
+        $services->set(UserDetailsHandler::class)->autowire();
+        $services->alias(UserDetailsHandlerInterface::class, UserDetailsHandler::class);
     }
 }
