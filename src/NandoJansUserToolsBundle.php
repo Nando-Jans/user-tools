@@ -2,6 +2,7 @@
 
 namespace NandoJans\UserTools;
 
+use NandoJans\UserTools\Command\ResetMfaCommand;
 use NandoJans\UserTools\Controller\AuthController;
 use NandoJans\UserTools\Controller\UserController;
 use NandoJans\UserTools\Entity\User;
@@ -332,6 +333,9 @@ final class NandoJansUserToolsBundle extends AbstractBundle
             ->autoconfigure()
             ->tag('form.type');
         $services->set(TwoFactorSetupService::class);
+        $services->set(ResetMfaCommand::class)
+            ->autowire()
+            ->autoconfigure();
         $services->set(EnvironmentTwoFactorCondition::class)
             ->args([
                 '$environment' => '%kernel.environment%',
