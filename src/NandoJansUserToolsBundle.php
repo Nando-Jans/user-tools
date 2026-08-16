@@ -10,6 +10,7 @@ use NandoJans\UserTools\EventSubscriber\ForceTwoFactorSetupSubscriber;
 use NandoJans\UserTools\Form\ForgotPasswordType;
 use NandoJans\UserTools\Form\LoginType;
 use NandoJans\UserTools\Form\ResetPasswordType;
+use NandoJans\UserTools\Form\UserDetailsType;
 use NandoJans\UserTools\Interface\ForgotPasswordHandlerInterface;
 use NandoJans\UserTools\Interface\UserDetailsHandlerInterface;
 use NandoJans\UserTools\Interface\UserRepositoryInterface;
@@ -157,8 +158,7 @@ final class NandoJansUserToolsBundle extends AbstractBundle
                     ->addDefaultsIfNotSet()
                     ->children()
                         ->scalarNode('form_type')
-                            ->isRequired()
-                            ->cannotBeEmpty()
+                            ->defaultValue(UserDetailsType::class)
                             ->validate()
                                 ->ifTrue(static fn (string $class): bool =>
                                 !is_a($class, FormTypeInterface::class, true)
@@ -170,7 +170,7 @@ final class NandoJansUserToolsBundle extends AbstractBundle
                             ->end()
                         ->end()
                         ->scalarNode('success_message')
-                            ->defaultNull()
+                            ->defaultValue('Your details have been saved.')
                         ->end()
                     ->end()
                 ->end()
@@ -324,6 +324,10 @@ final class NandoJansUserToolsBundle extends AbstractBundle
             ->tag('form.type');
 
         $services->set(LoginType::class)
+            ->autowire()
+            ->autoconfigure()
+            ->tag('form.type');
+        $services->set(UserDetailsType::class)
             ->autowire()
             ->autoconfigure()
             ->tag('form.type');

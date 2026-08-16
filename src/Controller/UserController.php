@@ -4,6 +4,7 @@ namespace NandoJans\UserTools\Controller;
 
 use NandoJans\UserTools\Form\ForgotPasswordType;
 use NandoJans\UserTools\Form\ResetPasswordType;
+use NandoJans\UserTools\Form\UserDetailsType;
 use NandoJans\UserTools\Interface\ForgotPasswordHandlerInterface;
 use NandoJans\UserTools\Interface\PasswordForgotEmailInterface;
 use NandoJans\UserTools\Interface\UserDetailsHandlerInterface;
@@ -34,16 +35,17 @@ class UserController extends AbstractController
     public function details(Request $request): Response
     {
         $user = $this->getUser();
-        $form = $this->createForm($this->detailsPage['form_type'], $user);
+        $formType = $this->detailsPage['form_type'] ?? UserDetailsType::class;
+        $form = $this->createForm($formType, $user);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
             $data = $form->getData();
-            $password = $form->get('password')->getData();
+            $password = (string) $form->get('password')->getData();
 
             $this->userDetailsHandler->save($data, $password);
 
-            $this->addFlash('success', $this->detailsPage['success_message']);
+            $this->addFlash('success', $this->detailsPage['success_message'] ?? 'Your details have been saved.');
 
             return $this->redirectToRoute('nando_jans_user_tools_details');
         } else if ($form->isSubmitted() && !$form->isValid()) {

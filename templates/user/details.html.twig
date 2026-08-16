@@ -1,1 +1,26 @@
-<h1>Overwrite the file to: templates/bundles/NandoJansUserToolsBundle/user/details.html.twig</h1>
+{% extends 'layout/admin.html.twig' %}
+
+{% block title %}My details{% endblock %}
+
+{% block body %}
+<div class="m-2">
+    <h1>My details</h1>
+    {% include 'components/flash_message.html.twig' %}
+
+    {{ form_start(form) }}
+        <fieldset class="mb-4">
+            <legend>Account details</legend>
+            {{ form_row(form.username) }}
+            {{ form_row(form.email) }}
+        </fieldset>
+
+        <fieldset class="mb-4">
+            <legend>Change password</legend>
+            <p class="text-muted">Leave both password fields blank to keep your current password.</p>
+            {{ form_row(form.password) }}
+        </fieldset>
+
+        {{ form_row(form.save) }}
+    {{ form_end(form) }}
+</div>
+{% endblock %}
