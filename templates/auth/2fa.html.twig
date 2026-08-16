@@ -2,7 +2,7 @@
 {% block body %}
     <h1>2FA code</h1>
     {% if authenticationError %}<div class="alert alert-danger">{{ authenticationError|trans(authenticationErrorData, 'SchebTwoFactorBundle') }}</div>{% endif %}
-    <form class="form" action="{{ checkPathUrl }}" method="post">
+    <form class="form" action="{{ checkPathRoute ? path(checkPathRoute) : checkPathUrl }}" method="post">
         <p>Haal de 2FA code uit je <strong>google authenticator</strong> app en vul deze hieronder in.</p>
         <input class="form-control" type="text" name="{{ authCodeParameterName }}" autocomplete="one-time-code" inputmode="numeric" autofocus>
         {% if displayTrustedOption %}<label><input type="checkbox" name="{{ trustedParameterName }}"> {{ 'trusted'|trans({}, 'SchebTwoFactorBundle') }}</label>{% endif %}
