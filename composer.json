@@ -1,6 +1,5 @@
 {
     "name": "nando-jans/user-tools",
-    "version": "1.2.1",
     "description": "Reusable user tools for Symfony",
     "type": "symfony-bundle",
     "keywords": ["symfony-ux"],
